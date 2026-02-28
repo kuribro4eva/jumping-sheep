@@ -217,6 +217,11 @@ const CSS = `
   border-bottom-color: var(--green-safe);
   transform: scale(1.05);
 }
+.letter-tile.help-revealed {
+  background: #E3F2FD;
+  border-bottom-color: #42A5F5;
+  color: #0D47A1;
+}
 .word-spacer { width: clamp(12px, 2.1vmin, 28px); }
 
 .keyboard-area {
@@ -228,6 +233,24 @@ const CSS = `
   gap: clamp(6px, 1vmin, 12px);
   flex: 1 1 0;
   justify-content: center;
+}
+.help-row {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: clamp(4px, 0.8vmin, 10px);
+}
+.help-btn {
+  background: #42A5F5;
+  color: white;
+  box-shadow: 0 4px 0 #1E88E5, 0 6px 10px rgba(0,0,0,0.18);
+}
+.help-btn:disabled {
+  background: #B0BEC5;
+  color: #ECEFF1;
+  box-shadow: 0 2px 0 #90A4AE;
+  cursor: default;
+  transform: none;
 }
 .kb-row { display: flex; gap: clamp(5px, 0.9vmin, 12px); justify-content: center; }
 .kb-key {
@@ -658,6 +681,7 @@ export default function JumpingSheep() {
   const [gameState, setGameState] = useState("playing");
   const [currentWord, setCurrentWord] = useState("");
   const [guessedLetters, setGuessedLetters] = useState(new Set());
+  const [helpLetters, setHelpLetters] = useState(new Set());
   const [wrongCount, setWrongCount] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [wordIndex, setWordIndex] = useState(0);
@@ -739,6 +763,7 @@ export default function JumpingSheep() {
     setWordIndex(wrappedIndex);
     setCurrentWord(theSet.words[wrappedIndex]);
     setGuessedLetters(new Set());
+    setHelpLetters(new Set());
     setWrongCount(0);
     setGameState("playing");
     resetSheep(diff);
@@ -814,6 +839,32 @@ export default function JumpingSheep() {
     },
     [guessedLetters, gameState, currentWord, wrongCount, data, triggerListen, triggerWin]
   );
+  const handleAskHelp = useCallback(() => {
+    if (gameState !== "playing" || !currentWord) return;
+
+    const wordLetters = currentWord.toUpperCase().replace(/[^A-Z]/g, "");
+    const candidates = [...new Set(wordLetters.split(""))].filter((l) => !guessedLetters.has(l));
+    if (candidates.length === 0) return;
+
+    const letter = candidates[Math.floor(Math.random() * candidates.length)];
+    const newGuessed = new Set(guessedLetters);
+    newGuessed.add(letter);
+    setGuessedLetters(newGuessed);
+
+    setHelpLetters((prev) => {
+      const next = new Set(prev);
+      next.add(letter);
+      return next;
+    });
+
+    const allGuessed = [...new Set(wordLetters.split(""))].every((l) => newGuessed.has(l));
+    if (allGuessed) {
+      setGameState("won");
+      triggerWin();
+    } else {
+      triggerListen();
+    }
+  }, [gameState, currentWord, guessedLetters, triggerListen, triggerWin]);
 
   const nextWord = () => goToWord(wordIndex + 1);
   const prevWord = () => goToWord(wordIndex - 1);
@@ -856,8 +907,9 @@ export default function JumpingSheep() {
         {word.split("").map((ch, ci) => {
           const isLetter = /[A-Z]/.test(ch);
           const revealed = isLetter && guessedLetters.has(ch);
+          const helpRevealed = revealed && helpLetters.has(ch);
           return (
-            <span key={`${wi}-${ci}`} className={`letter-tile ${revealed ? "revealed" : ""}`}>
+            <span key={`${wi}-${ci}`} className={`letter-tile ${revealed ? "revealed" : ""} ${helpRevealed ? "help-revealed" : ""}`}>
               {isLetter ? (revealed || gameState === "lost" ? ch : "") : ch}
             </span>
           );
@@ -867,6 +919,8 @@ export default function JumpingSheep() {
   };
 
   const wordLettersSet = new Set(currentWord.toUpperCase().replace(/[^A-Z]/g, "").split(""));
+  const helpCandidates = [...wordLettersSet].filter((letter) => !guessedLetters.has(letter));
+  const canAskHelp = screen === "playing" && gameState === "playing" && helpCandidates.length > 0;
 
   return (
     <div className="game-root" ref={rootRef}>
@@ -925,6 +979,11 @@ export default function JumpingSheep() {
             </div>
             <div className="word-area">{renderWord()}</div>
             <div className="keyboard-area">
+              <div className="help-row">
+                <button className="overlay-btn help-btn" onClick={handleAskHelp} disabled={!canAskHelp}>
+                  Ask for Help
+                </button>
+              </div>
               {KB_ROWS.map((row, ri) => (
                 <div className="kb-row" key={ri}>
                   {row.map((letter) => {
