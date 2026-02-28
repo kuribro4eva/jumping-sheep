@@ -21,6 +21,7 @@ const DEFAULT_DATA = {
   ],
   activeSetId: "zechariah-default",
   difficulty: 6,
+  helpAppearsAt: 1,
 };
 
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -45,6 +46,16 @@ async function saveData(data) {
   } catch (e) {
     console.error("Save error:", e);
   }
+}
+
+function normalizeData(raw) {
+  const sets = Array.isArray(raw?.sets) && raw.sets.length > 0 ? raw.sets : DEFAULT_DATA.sets;
+  const activeSetId = sets.some((s) => s.id === raw?.activeSetId) ? raw.activeSetId : sets[0].id;
+  const diffRaw = Number(raw?.difficulty);
+  const difficulty = Number.isFinite(diffRaw) ? Math.min(10, Math.max(3, Math.round(diffRaw))) : DEFAULT_DATA.difficulty;
+  const helpRaw = Number(raw?.helpAppearsAt);
+  const helpAppearsAt = Number.isFinite(helpRaw) ? Math.min(difficulty, Math.max(1, Math.round(helpRaw))) : DEFAULT_DATA.helpAppearsAt;
+  return { sets, activeSetId, difficulty, helpAppearsAt };
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -591,11 +602,16 @@ function SettingsModal({ data, onApply, onBackToTitle, onClose }) {
   const [sets, setSets] = useState(data.sets);
   const [activeId, setActiveId] = useState(data.activeSetId);
   const [diff, setDiff] = useState(data.difficulty);
+  const [helpAt, setHelpAt] = useState(Math.min(data.helpAppearsAt || 1, data.difficulty));
   const [revealedId, setRevealedId] = useState(null);
   const [newName, setNewName] = useState("");
   const [newWords, setNewWords] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [editWords, setEditWords] = useState("");
+
+  useEffect(() => {
+    setHelpAt((prev) => Math.min(Math.max(prev, 1), diff));
+  }, [diff]);
 
   const handleAdd = () => {
     const words = newWords.split(",").map((w) => w.trim().toLowerCase()).filter(Boolean);
@@ -615,7 +631,12 @@ function SettingsModal({ data, onApply, onBackToTitle, onClose }) {
     setEditingId(null);
   };
 
-  const buildData = () => ({ sets, activeSetId: activeId || sets[0]?.id, difficulty: diff });
+  const buildData = () => ({
+    sets,
+    activeSetId: activeId || sets[0]?.id,
+    difficulty: diff,
+    helpAppearsAt: Math.min(Math.max(helpAt, 1), diff),
+  });
 
   return (
     <div className="settings-backdrop" onClick={onClose}>
@@ -628,6 +649,15 @@ function SettingsModal({ data, onApply, onBackToTitle, onClose }) {
             <input type="range" min="3" max="10" value={diff} onChange={(e) => setDiff(Number(e.target.value))} className="diff-slider" />
             <span style={{ fontSize: "clamp(10px,1.2vmin,13px)", color: "#999" }}>10</span>
             <span className="diff-val">{diff}</span>
+          </div>
+        </div>
+        <div className="settings-section">
+          <label className="settings-label">Help button appears when chances left are this low</label>
+          <div className="diff-slider-wrap">
+            <span style={{ fontSize: "clamp(10px,1.2vmin,13px)", color: "#999" }}>1</span>
+            <input type="range" min="1" max={diff} value={helpAt} onChange={(e) => setHelpAt(Number(e.target.value))} className="diff-slider" />
+            <span style={{ fontSize: "clamp(10px,1.2vmin,13px)", color: "#999" }}>{diff}</span>
+            <span className="diff-val">{helpAt}</span>
           </div>
         </div>
         <div className="settings-section">
@@ -703,7 +733,9 @@ export default function JumpingSheep() {
     (async () => {
       let loaded = await loadData();
       if (!loaded) { loaded = DEFAULT_DATA; await saveData(loaded); }
-      setData(loaded); setScreen("title");
+      const normalized = normalizeData(loaded);
+      setData(normalized); setScreen("title");
+      if (JSON.stringify(normalized) !== JSON.stringify(loaded)) await saveData(normalized);
     })();
   }, []);
 
@@ -871,15 +903,16 @@ export default function JumpingSheep() {
 
   // Apply settings live (no restart to title)
   const handleApply = async (newData) => {
-    const setChanged = newData.activeSetId !== data.activeSetId;
-    setData(newData); await saveData(newData);
+    const normalized = normalizeData(newData);
+    const setChanged = normalized.activeSetId !== data.activeSetId;
+    setData(normalized); await saveData(normalized);
     setShowSettings(false);
     if (setChanged) {
-      const newSet = newData.sets.find((s) => s.id === newData.activeSetId);
-      goToWord(0, newSet, newData.difficulty);
+      const newSet = normalized.sets.find((s) => s.id === normalized.activeSetId);
+      goToWord(0, newSet, normalized.difficulty);
     } else {
       // Difficulty may have changed — reset current word
-      goToWord(wordIndex, activeSet, newData.difficulty);
+      goToWord(wordIndex, activeSet, normalized.difficulty);
     }
   };
 
@@ -920,7 +953,9 @@ export default function JumpingSheep() {
 
   const wordLettersSet = new Set(currentWord.toUpperCase().replace(/[^A-Z]/g, "").split(""));
   const helpCandidates = [...wordLettersSet].filter((letter) => !guessedLetters.has(letter));
-  const canAskHelp = screen === "playing" && gameState === "playing" && helpCandidates.length > 0;
+  const chancesLeft = data.difficulty - wrongCount;
+  const showHelpButton = screen === "playing" && gameState === "playing" && chancesLeft <= data.helpAppearsAt;
+  const canAskHelp = showHelpButton && helpCandidates.length > 0;
 
   return (
     <div className="game-root" ref={rootRef}>
@@ -979,11 +1014,13 @@ export default function JumpingSheep() {
             </div>
             <div className="word-area">{renderWord()}</div>
             <div className="keyboard-area">
-              <div className="help-row">
-                <button className="overlay-btn help-btn" onClick={handleAskHelp} disabled={!canAskHelp}>
-                  Ask for Help
-                </button>
-              </div>
+              {showHelpButton && (
+                <div className="help-row">
+                  <button className="overlay-btn help-btn" onClick={handleAskHelp} disabled={!canAskHelp}>
+                    Help
+                  </button>
+                </div>
+              )}
               {KB_ROWS.map((row, ri) => (
                 <div className="kb-row" key={ri}>
                   {row.map((letter) => {
