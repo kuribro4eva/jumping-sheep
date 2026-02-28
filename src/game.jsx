@@ -55,13 +55,14 @@ function getPositions(chances) {
   const pathEndX = 790;
   const pathLen = pathEndX - pathStartX;
   const groundY = 182;
-  const numRocks = chances - 1;
-  const positions = [];
-  for (let i = 0; i < chances; i++) {
-    const t = numRocks > 0 ? i / numRocks : 0;
+  const numRocks = Math.max(chances - 1, 0);
+  const positions = [{ x: SAFE_X, y: SAFE_Y + 38 }];
+
+  for (let i = 0; i < numRocks; i++) {
+    const t = numRocks > 1 ? i / (numRocks - 1) : 0;
     positions.push({
       x: pathStartX + t * pathLen,
-      y: groundY + Math.sin(i * 1.3) * 4,
+      y: groundY + Math.sin((i + 1) * 1.3) * 4,
     });
   }
   return positions;
@@ -197,8 +198,8 @@ const CSS = `
   flex-shrink: 0;
 }
 .letter-tile {
-  width: clamp(30px, 5.3vmin, 68px);
-  height: clamp(36px, 6.2vmin, 78px);
+  width: clamp(36px, 6.8vmin, 84px);
+  height: clamp(44px, 8vmin, 98px);
   background: white;
   border-bottom: 4px solid var(--brown-mid);
   border-radius: 6px;
@@ -206,7 +207,7 @@ const CSS = `
   align-items: center;
   justify-content: center;
   font-family: 'Luckiest Guy', cursive;
-  font-size: clamp(20px, 3.8vmin, 46px);
+  font-size: clamp(24px, 4.8vmin, 58px);
   color: var(--brown-dark);
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   transition: transform 0.3s, background 0.3s;
