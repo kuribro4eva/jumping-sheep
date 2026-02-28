@@ -564,7 +564,7 @@ function CliffScene({ wrongGuesses, maxWrong, sheepMood, sheepX, sheepY, sheepFl
 // ═══════════════════════════════════════════════════════════════
 // SETTINGS MODAL
 // ═══════════════════════════════════════════════════════════════
-function SettingsModal({ data, onApply, onApplyRestart, onClose }) {
+function SettingsModal({ data, onApply, onApplyRestart, onBackToTitle, onClose }) {
   const [sets, setSets] = useState(data.sets);
   const [activeId, setActiveId] = useState(data.activeSetId);
   const [diff, setDiff] = useState(data.difficulty);
@@ -639,6 +639,7 @@ function SettingsModal({ data, onApply, onApplyRestart, onClose }) {
           </div>
         </div>
         <div className="settings-footer">
+          <button className="overlay-btn secondary" onClick={onBackToTitle}>Back to Title</button>
           <button className="overlay-btn secondary" onClick={onClose}>Cancel</button>
           <button className="overlay-btn primary" onClick={() => onApply(buildData())}>Apply</button>
           <button className="overlay-btn secondary" onClick={() => onApplyRestart(buildData())}>Apply & Restart</button>
@@ -690,11 +691,18 @@ export default function JumpingSheep() {
   }, []);
 
   useEffect(() => {
-    if (screen !== "playing" || gameState !== "playing") return;
-    const handler = (e) => { const key = e.key.toUpperCase(); if (/^[A-Z]$/.test(key)) handleGuess(key); };
+    if (screen !== "playing" || gameState !== "playing" || showSettings) return;
+    const handler = (e) => {
+      if (e.target instanceof HTMLElement) {
+        const tag = e.target.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || e.target.isContentEditable) return;
+      }
+      const key = e.key.toUpperCase();
+      if (/^[A-Z]$/.test(key)) handleGuess(key);
+    };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [screen, gameState, guessedLetters, currentWord]);
+  }, [screen, gameState, showSettings, guessedLetters, currentWord]);
 
   useEffect(() => {
     if (!data || gameState !== "playing" || sheepMood === "listening" || sheepMood === "falling") return;
@@ -830,6 +838,10 @@ export default function JumpingSheep() {
     setData(newData); await saveData(newData);
     setShowSettings(false); setScreen("title");
   };
+  const handleBackToTitle = () => {
+    setShowSettings(false);
+    setScreen("title");
+  };
 
   if (screen === "loading" || !data) {
     return (
@@ -959,7 +971,15 @@ export default function JumpingSheep() {
           </>
         )}
 
-        {showSettings && <SettingsModal data={data} onApply={handleApply} onApplyRestart={handleApplyRestart} onClose={() => setShowSettings(false)} />}
+        {showSettings && (
+          <SettingsModal
+            data={data}
+            onApply={handleApply}
+            onApplyRestart={handleApplyRestart}
+            onBackToTitle={handleBackToTitle}
+            onClose={() => setShowSettings(false)}
+          />
+        )}
       </div>
     </div>
   );
