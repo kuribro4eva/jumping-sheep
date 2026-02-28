@@ -198,8 +198,8 @@ const CSS = `
   flex-shrink: 0;
 }
 .letter-tile {
-  width: clamp(36px, 6.8vmin, 84px);
-  height: clamp(44px, 8vmin, 98px);
+  width: clamp(42px, 8.2vmin, 100px);
+  height: clamp(52px, 9.6vmin, 116px);
   background: white;
   border-bottom: 4px solid var(--brown-mid);
   border-radius: 6px;
@@ -207,7 +207,7 @@ const CSS = `
   align-items: center;
   justify-content: center;
   font-family: 'Luckiest Guy', cursive;
-  font-size: clamp(24px, 4.8vmin, 58px);
+  font-size: clamp(30px, 6.2vmin, 72px);
   color: var(--brown-dark);
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   transition: transform 0.3s, background 0.3s;
