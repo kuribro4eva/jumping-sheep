@@ -564,7 +564,7 @@ function CliffScene({ wrongGuesses, maxWrong, sheepMood, sheepX, sheepY, sheepFl
 // ═══════════════════════════════════════════════════════════════
 // SETTINGS MODAL
 // ═══════════════════════════════════════════════════════════════
-function SettingsModal({ data, onApply, onApplyRestart, onBackToTitle, onClose }) {
+function SettingsModal({ data, onApply, onBackToTitle, onClose }) {
   const [sets, setSets] = useState(data.sets);
   const [activeId, setActiveId] = useState(data.activeSetId);
   const [diff, setDiff] = useState(data.difficulty);
@@ -642,7 +642,6 @@ function SettingsModal({ data, onApply, onApplyRestart, onBackToTitle, onClose }
           <button className="overlay-btn secondary" onClick={onBackToTitle}>Back to Title</button>
           <button className="overlay-btn secondary" onClick={onClose}>Cancel</button>
           <button className="overlay-btn primary" onClick={() => onApply(buildData())}>Apply</button>
-          <button className="overlay-btn secondary" onClick={() => onApplyRestart(buildData())}>Apply & Restart</button>
         </div>
       </div>
     </div>
@@ -833,11 +832,6 @@ export default function JumpingSheep() {
     }
   };
 
-  // Apply & Restart (back to title)
-  const handleApplyRestart = async (newData) => {
-    setData(newData); await saveData(newData);
-    setShowSettings(false); setScreen("title");
-  };
   const handleBackToTitle = () => {
     setShowSettings(false);
     setScreen("title");
@@ -975,7 +969,6 @@ export default function JumpingSheep() {
           <SettingsModal
             data={data}
             onApply={handleApply}
-            onApplyRestart={handleApplyRestart}
             onBackToTitle={handleBackToTitle}
             onClose={() => setShowSettings(false)}
           />
