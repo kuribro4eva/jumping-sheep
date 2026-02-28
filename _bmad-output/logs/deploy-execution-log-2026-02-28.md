@@ -62,3 +62,21 @@ Status: Completed
 - Initial run failed at `Configure Pages` because Pages site was not enabled yet (HTTP 404 from Pages API).
 - Applied workflow fix: `actions/configure-pages@v5` now sets `enablement: true`.
 - Preparing follow-up commit and push to trigger corrected deployment.
+- Second run failed because workflow token lacked permission to create Pages site automatically.
+- Enabled Pages manually via API:
+  - `gh api -X POST repos/kuribro4eva/jumping-sheep/pages -f build_type=workflow`
+- Triggered fresh deployment run after manual enablement.
+- Manual run completed successfully:
+  - `https://github.com/kuribro4eva/jumping-sheep/actions/runs/22528491352`
+- Pages site status confirmed via API:
+  - `https://kuribro4eva.github.io/jumping-sheep/`
+- HTTP verification:
+  - `curl -I -L https://kuribro4eva.github.io/jumping-sheep/` returned `HTTP/2 200`.
+
+Status: Completed
+
+## Final Outcome
+
+- Repository: `https://github.com/kuribro4eva/jumping-sheep`
+- Pages: `https://kuribro4eva.github.io/jumping-sheep/`
+- Deployment workflow: passing
